@@ -9,6 +9,7 @@
 #include <iostream>
 #include "cell.hpp"
 #include "cell_type.hpp"
+#include "utility.hpp"
 
 extern std::mt19937 rng_gen;
 
@@ -28,20 +29,7 @@ private:
 	bool changed;
   	bool has_setup_signaling;
   	std::array<std::array<std::array<cell, GSize>, GSize>, GSize> grid;
-	
-	template <typename Container>
-	inline typename Container::value_type fold_plus(Container c)
-	{
-		return std::accumulate(std::begin(c), std::end(c), 0);
-	}
 
-	template <typename Container>
-	inline typename Container::value_type fold_plus_and(Container c, typename Container::value_type v)
-	{
-		return std::accumulate(std::begin(c), std::end(c), 0, [&](typename Container::value_type a, typename Container::value_type b) {
-			return a + (b & v);
-		});
-	}
 
 	/* For the Neighborhood interaction.
 	 * Names for the buffer correspond to the I-Buf,
