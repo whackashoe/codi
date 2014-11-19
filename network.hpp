@@ -16,8 +16,8 @@ extern std::mt19937 rng_gen;
  * CoDi is an acronym for Collect and Distribute, 
  * referring to the signals and spikes in a neural network.
  * 
- * CoDi uses a von Neumann neighborhood modified for a three-dimensional space; 
- * each cell looks at the states of its six orthogonal neighbors and its own state. 
+ * CoDi uses a von Neumann neighborhood modified for a three-dimensional space
+ * each cell looks at the states of its six orthogonal neighbors(EWNSUD) and its own state. 
  * Signals are distributed from the neuron bodies via their axon tree and collected from connection dendrites.
  * These two basic interactions cover every case, and they can be expressed simply, using a small number of rules.
  */
@@ -46,7 +46,7 @@ private:
 	/* For the Neighborhood interaction.
 	 * Names for the buffer correspond to the I-Buf,
 	 * so where the Information (signal) came from;
-	 * I.g. in the north buffer (+y=2) of a cell is either what came
+	 * e.g. in the north buffer (+y=2) of a cell is either what came
 	 * from the north (after kick) or the what will go to the south 
 	 * (before kick).
 	 * iobuf[0..5] = east(+x), west(-x), north(+y), south(-y),
@@ -55,8 +55,8 @@ private:
 	 */
 	void kicking()
 	{
+
 	    // For the positive directions
-	    
 	    for(int iz=0; iz<GSize; ++iz) {
 	    	for(int iy=0; iy<GSize; ++iy) {
 				for(int ix=0; ix<GSize; ++ix) {
@@ -68,7 +68,6 @@ private:
 		}
 
 		// For the negative directions
-		
 		for(int iz=GSize-1; iz >= 0; --iz) {
   			for(int iy=GSize-1; iy >= 0; --iy) {
 				for(int ix=GSize-1; ix >= 0; --ix) {
@@ -80,11 +79,11 @@ private:
 	    }
 	}
 
+
 	void setup_signaling()
 	{
 		std::uniform_int_distribution<int> three_two_rng(0, 32);
     	has_setup_signaling = true;
-
 		
     	for(int iz=0; iz<GSize; ++iz) {
 	    	for(int iy=0; iy<GSize; ++iy) {
@@ -100,6 +99,7 @@ private:
 		}
 	}
 
+
 	/* In a growth phase a neural network is grown in the CA-space based on an underlying chromosome. 
 	 * The growth phase is followed by a signaling- or processing-phase
 	 */
@@ -107,22 +107,20 @@ private:
   	{
   		int input_sum { 0 };
     	changed = false;
-
 		
     	for(int iz=0; iz<GSize; ++iz) {
       		for(int iy=0; iy<GSize; ++iy) {
 				for(int ix=0; ix<GSize; ++ix) {
 	  				switch(grid[iz][iy][ix].type) {
 	  					case BLANK: 
-					    	// see if it is a neuronseed (in bit ..7,8 of chromo) 
-					    	if((grid[iz][iy][ix].chromo >> 6) == NEURONSEED) {
-					      		grid[iz][iy][ix].type = NEURON;
+					    	if(grid[iz][iy][ix].is_neuronseed()) {
 					      		changed = true;
-					      		// and inform the neighbors immediately 
+					      		grid[iz][iy][ix].type = NEURON;
+					      		// inform the neighbors immediately 
 					      		grid[iz][iy][ix].gate = (grid[iz][iy][ix].chromo & 63) % 6;
 								grid[iz][iy][ix].iobuf.fill(DENDRITE_SIGNAL);
-					     		grid[iz][iy][ix].iobuf[grid[iz][iy][ix].gate] = AXON_SIGNAL;
-					      		grid[iz][iy][ix].iobuf[((grid[iz][iy][ix].gate % 2) * -2) + 1 + grid[iz][iy][ix].gate] = AXON_SIGNAL;
+					     		grid[iz][iy][ix].iobuf_from_gate() = AXON_SIGNAL;
+					      		grid[iz][iy][ix].iobuf_from_adjacent_gate() = AXON_SIGNAL;
 					    		break;
 					    	}
 
@@ -145,14 +143,15 @@ private:
 							// test for axon signals
 							input_sum = fold_plus_and(grid[iz][iy][ix].iobuf, AXON_SIGNAL); 
 							if(input_sum == AXON_SIGNAL) {
-	      						grid[iz][iy][ix].type = AXON;
 							    changed = true;
+	      						grid[iz][iy][ix].type = AXON;
 
 							    for(int i=0; i<6; ++i) {
 									if(grid[iz][iy][ix].iobuf[i] == AXON) {
 								  		grid[iz][iy][ix].gate = i;
 									}
-									grid[iz][iy][ix].iobuf[i] = (((grid[iz][iy][ix].chromo >> i) & 1) != 0) ? AXON_SIGNAL : 0;
+
+									grid[iz][iy][ix].iobuf[i] = grid[iz][iy][ix].chromo_dir_choice(i, AXON_SIGNAL, 0);
 								}
 								break;
 							}
@@ -162,7 +161,7 @@ private:
 							    break;
 							}
 
-						    // Test for dendrite signals
+						    // test for dendrite signals
 						    input_sum = fold_plus_and(grid[iz][iy][ix].iobuf, DENDRITE_SIGNAL);
 							if(input_sum == DENDRITE_SIGNAL) {
 								changed = true;
@@ -170,36 +169,34 @@ private:
 
 								for(int i=0; i<6; ++i) {
 									if(grid[iz][iy][ix].iobuf[i] != 0) {
-			  							grid[iz][iy][ix].gate = ((i % 2) * -2) + 1 + i;
+			  							grid[iz][iy][ix].gate = cell::adjacent_gate(i);
 									}
-								}
-
-								for(int i=0; i<6; ++i) {
-									grid[iz][iy][ix].iobuf[i] = (((grid[iz][iy][ix].chromo >> i) & 1) != 0) ? DENDRITE_SIGNAL : 0;
+					
+									grid[iz][iy][ix].iobuf[i] = grid[iz][iy][ix].chromo_dir_choice(i, DENDRITE_SIGNAL, 0);
 								}
 
 								break;
 							}
 
-	    					// default(more than one dendrite signal and no axon signal)
+	    					// default (more than one dendrite signal and no axon signal)
 	    					grid[iz][iy][ix].iobuf.fill(0);
 	    					break;
 
 	  					case NEURON:
 							grid[iz][iy][ix].iobuf.fill(DENDRITE_SIGNAL);
-					    	grid[iz][iy][ix].iobuf[grid[iz][iy][ix].gate] = AXON_SIGNAL;
-					    	grid[iz][iy][ix].iobuf[((grid[iz][iy][ix].gate % 2) * -2) + 1 + grid[iz][iy][ix].gate] = AXON_SIGNAL; 
+					    	grid[iz][iy][ix].iobuf_from_gate() = AXON_SIGNAL;
+					    	grid[iz][iy][ix].iobuf_from_adjacent_gate() = AXON_SIGNAL; 
 					   		break;
 
 						case AXON:
 							for(int i=0; i<6; ++i) {
-								grid[iz][iy][ix].iobuf[i] = (((grid[iz][iy][ix].chromo >> i) & 1) != 0) ? AXON_SIGNAL : 0;
+								grid[iz][iy][ix].iobuf[i] = grid[iz][iy][ix].chromo_dir_choice(i, AXON_SIGNAL, 0);
 							}
 							break;
 
 						case DENDRITE:
 	    					for(int i=0; i<6; ++i) {
-	    						grid[iz][iy][ix].iobuf[i] = (((grid[iz][iy][ix].chromo >> i) & 1) != 0) ? DENDRITE_SIGNAL : 0;
+	    						grid[iz][iy][ix].iobuf[i] = grid[iz][iy][ix].chromo_dir_choice(i, DENDRITE_SIGNAL, 0);
 	    					}
 	    					break;
 	    				default:
@@ -214,21 +211,21 @@ private:
 	    kicking(); 
 	}
 
-	/* Signals are distributed from the neuron bodies via their axon tree and collected from connection dendrites.
+
+	/* Signals are distributed from the neuron bodies via their axon tree 
+	 * and collected from connection dendrites.
 	 */
 	void signal_step()
 	{
     	std::uint8_t input_sum { 0 };
 
-		
     	for(int iz=0; iz<GSize; ++iz) {
       		for(int iy=0; iy<GSize; ++iy) {
 				for(int ix=0; ix<GSize; ++ix) {
 					switch(grid[iz][iy][ix].type) {
 						case BLANK: break;
 
-						/*
-  						 * The neurons sum the incoming signal values and fire after a threshold is reached. 
+						/* The neurons sum the incoming signal values and fire after a threshold is reached. 
   						 * This behavior of the neuron bodies can be modified easily to suit a given problem.
   						 * The output of the neuron bodies is passed on to its surrounding axon cells. 
   						 * These two types of cell-to-cell interaction cover all kinds of cell encounters.
@@ -236,32 +233,31 @@ private:
 						case NEURON:
 							input_sum = 1 // add default gain
 							 	+ fold_plus(grid[iz][iy][ix].iobuf)
-    						 	- grid[iz][iy][ix].iobuf[grid[iz][iy][ix].gate]
-						    	- grid[iz][iy][ix].iobuf[((grid[iz][iy][ix].gate % 2) * -2) + 1 + grid[iz][iy][ix].gate];
+    						 	- grid[iz][iy][ix].iobuf_from_gate()
+						    	- grid[iz][iy][ix].iobuf_from_adjacent_gate();
 							
 							grid[iz][iy][ix].iobuf.fill(0);
 							grid[iz][iy][ix].activation += input_sum;
 							
 							 // Fire now.
 							if(grid[iz][iy][ix].activation > 31) {
-							   grid[iz][iy][ix].iobuf[grid[iz][iy][ix].gate] = 1;
-							   grid[iz][iy][ix].iobuf[((grid[iz][iy][ix].gate % 2) * -2) + 1 + grid[iz][iy][ix].gate] = 1;
+							   grid[iz][iy][ix].iobuf_from_gate() = 1;
+							   grid[iz][iy][ix].iobuf_from_adjacent_gate() = 1;
 							   grid[iz][iy][ix].activation = 0;
 							}
 						  	break;
 
 						case AXON:
-							for(int i=0; i<6; ++i) {
-						    	grid[iz][iy][ix].iobuf[i] = grid[iz][iy][ix].iobuf[grid[iz][iy][ix].gate];
-							}
-							grid[iz][iy][ix].activation = ((grid[iz][iy][ix].iobuf[grid[iz][iy][ix].gate]) != 0) ? 1 : 0;
+						    grid[iz][iy][ix].iobuf.fill(grid[iz][iy][ix].iobuf_from_gate());
+							grid[iz][iy][ix].activation = (grid[iz][iy][ix].iobuf_from_gate() != 0) ? 1 : 0;
 						 	break;
+
 
 						case DENDRITE:
 							input_sum = fold_plus(grid[iz][iy][ix].iobuf);
 							input_sum = (input_sum > 2) ? 2 : input_sum;
 						    grid[iz][iy][ix].iobuf.fill(0);
-						  	grid[iz][iy][ix].iobuf[grid[iz][iy][ix].gate] = input_sum;
+						  	grid[iz][iy][ix].iobuf_from_gate() = input_sum;
 						  	grid[iz][iy][ix].activation = (input_sum != 0) ? 1 : 0;
 							break;
 					}
@@ -278,7 +274,6 @@ public:
 	{
 		std::uniform_int_distribution<std::uint32_t> gsize_rng(0, GSize);
 
-		
 		for(int iz=0; iz<GSize; ++iz) {
 			for(int iy=0; iy<GSize; ++iy) {
 				for(int ix=0; ix<GSize; ++ix) {
@@ -297,20 +292,21 @@ public:
 	  				}
 
 	  				// Decrease prob of neuronseeds
-	  				if(grid[iz][iy][ix].chromo >> 6 == NEURONSEED) {
+	  				if(grid[iz][iy][ix].is_neuronseed()) {
 	  					if(gsize_rng(rng_gen) < (GSize / 2)) {
 	  						grid[iz][iy][ix].chromo &= ~192;
 	  					}
 	  				}
 
 	  				// restrict axon-initial-growth in neuron to XY-plane.
-	  				if(grid[iz][iy][ix].chromo >> 6 == NEURONSEED) {
+	  				if(grid[iz][iy][ix].is_neuronseed()) {
 	  					grid[iz][iy][ix].chromo = (grid[iz][iy][ix].chromo & 192) | ((grid[iz][iy][ix].chromo & 63) % 4);
 	  				}
 	  		  	}
 	  		}
 		}
 	}
+
 
   	void step_ca()
   	{
@@ -325,13 +321,21 @@ public:
     	}
   	}
 
-	void render()
+
+	void render() const
 	{
 		int ix { 0 };
 
 		for(int iz=0; iz<GSize; ++iz) {
 			for(int iy=0; iy<GSize; ++iy) {
-				std::cout << grid[iz][iy][ix].type;
+				char c;
+				switch(grid[iz][iy][ix].type) {
+					case BLANK:    c = ' '; break;
+					case NEURON:   c = '@'; break;
+					case AXON:     c = '*'; break;
+					case DENDRITE: c = '.'; break;
+				}
+				std::cout << c;
 			}
 			std::cout << std::endl;
 		}

@@ -2,8 +2,8 @@
 #include <random>
 #include "network.hpp"
 
-constexpr int GSize = 64;
-constexpr int Max_Iterations = 100;
+constexpr int GSize = 30;
+constexpr int Max_Iterations = 50;
 
 std::random_device rd;
 std::mt19937 rng_gen(rd());

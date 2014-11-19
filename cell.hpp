@@ -46,6 +46,60 @@ public:
 		chromo(two_five_six_rng(rng_gen)), 
 		gate(0)
 		{ }
+
+
+	/* gets "left" from "right" and "right" from "left"
+	 * ie. if we are given left we return right
+	 *				 given up we return down
+	 *				 given south we return north
+	 */
+	inline std::uint8_t adjacent_gate() const
+	{
+		return ((gate % 2) * -2) + 1 + gate;
+	}
+
+	inline static std::uint8_t adjacent_gate(const std::uint8_t gate);
+
+	/* see if it is a neuronseed (in bit ..7,8 of chromo) 
+	 */
+	inline bool is_neuronseed() const
+	{
+		return (chromo >> 6) == NEURONSEED;
+	}
+
+	/* return 'a' if chromo dir is right, 'b' if chromo diris left / odd->'a', even->'b'
+     * dir is from shift ie X(east, west) Y(north, south) Z(top bottom)
+     * read chromo bitmask note above
+	*/
+	inline std::uint8_t chromo_dir_choice(const int shift, const std::uint8_t a, const std::uint8_t b) const
+	{
+		return (((chromo >> shift) & 1) != 0) ? a : b;
+	}
+
+	inline std::uint8_t & iobuf_from_gate()
+	{
+		return iobuf[gate];
+	}
+
+	inline std::uint8_t iobuf_from_gate() const
+	{
+		return iobuf[gate];
+	}
+
+	inline std::uint8_t & iobuf_from_adjacent_gate()
+	{
+		return iobuf[adjacent_gate()];
+	}
+
+	inline std::uint8_t iobuf_from_adjacent_gate() const
+	{
+		return iobuf[adjacent_gate()];
+	}
 };
+
+std::uint8_t cell::adjacent_gate(const std::uint8_t gate)
+{
+	return ((gate % 2) * -2) + 1 + gate;
+}
 
 #endif
