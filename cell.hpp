@@ -13,6 +13,7 @@ class cell
 {
 public:
 	cell_type type;
+	
 	int activation; //activation counter
 	
 	/* the chromo is a bitmask for the 6 directions[Bit0..5]:
@@ -21,7 +22,13 @@ public:
 	 */
 	int chromo;
 	
-	/* the gate and Chromo are masks that invert the directions
+	/* Every cell has a gate, which is interpreted differently depending on the type of the cell. 
+	 * A neuron cell uses this gate to store its orientation, 
+	 * i.e. the direction in which the axon is pointing. 
+	 * In an axon cell, the gate points to the neighbor from which the neural signals are received. 
+	 * An axon cell accepts input only from this neighbor, but makes its own output available to all its neighbors. 
+	 * In this way axon cells distribute information.
+	 * the gate and Chromo are masks that invert the directions
 	 * when applied to output selection. 
 	 */
 	int gate;
