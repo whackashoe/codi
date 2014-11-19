@@ -14,54 +14,24 @@ extern std::mt19937 rng_gen;
 template <unsigned int GSize>
 class network
 {
-public:
+private:
 	bool changed;
   	int input_sum;
   	bool signaling_inited;
-  	int count_ca_steps;
-  	int max_steps;
-	std::array<std::array<std::array<cell, GSize>, GSize>, GSize> grid;
-
-	network() : 
-		changed(true), 
-		input_sum(0), 
-		signaling_inited(false), 
-		count_ca_steps(0),
-		max_steps(100)
+  	std::array<std::array<std::array<cell, GSize>, GSize>, GSize> grid;
+	
+	template <typename Container>
+	inline typename Container::value_type fold_plus(Container c)
 	{
-		std::uniform_int_distribution<int> gsize_rng(0, GSize);
+		return std::accumulate(std::begin(c), std::end(c), 0);
+	}
 
-		for(int iz=0; iz<GSize; ++iz) {
-			for(int iy=0; iy<GSize; ++iy) {
-				for(int ix=0; ix<GSize; ++ix) {
-					// restrict to grid
-					if(((iz + 1) % 2) * (iy % 2) == 1) {
-						grid[iz][iy][ix].chromo = (grid[iz][iy][ix].chromo & ~3) | 12;
-					}
-
-		  			if((iz % 2) * ((iy + 1) % 2) == 1) {
-		  				grid[iz][iy][ix].chromo = (grid[iz][iy][ix].chromo & ~12) | 3;
-		  			}
-
-		  			// Kill unwanted neuronseeds. Neuronsee only on crossings.
-	  				if((iz % 2) + (iy % 2) != 0) {
-	  					grid[iz][iy][ix].chromo &= ~192;
-	  				}
-
-	  				// Decrease prob of neuronseeds
-	  				if(grid[iz][iy][ix].chromo >> 6 == NEURONSEED) {
-	  					if(gsize_rng(rng_gen) < (GSize / 2)) {
-	  						grid[iz][iy][ix].chromo &= ~192;
-	  					}
-	  				}
-
-	  				// restrict axon-initial-growth in neuron to XY-plane.
-	  				if(grid[iz][iy][ix].chromo >> 6 == NEURONSEED) {
-	  					grid[iz][iy][ix].chromo = (grid[iz][iy][ix].chromo & 192) | ((grid[iz][iy][ix].chromo & 63) % 4);
-	  				}
-	  		  	}
-	  		}
-		}
+	template <typename Container>
+	inline typename Container::value_type fold_plus_and(Container c, typename Container::value_type v)
+	{
+		return std::accumulate(std::begin(c), std::end(c), 0, [&](int a, int b) {
+			return a + (b & v);
+		});
 	}
 
 	/* For the Neighborhood interaction.
@@ -119,20 +89,7 @@ public:
 		}
 	}
 
-  	void step_ca()
-  	{
-    	if(changed) {
-    		growth_step();
-    	} else {
-      		if(!signaling_inited) {
-      			init_signaling();
-	      	}
-
-    		signal_step();
-    	}
-  	}
-
-  	/* now the rules 
+	/* now the rules 
 	 * the chromo is a bitmask for the 6 directions[Bit0..5]:
 	 * east(+x), west(-x), north(+y), south(-y),
 	 * top(+z), bottom(-z) 
@@ -155,28 +112,21 @@ public:
 					      		changed = true;
 					      		// and inform the neighbors immediately 
 					      		grid[iz][iy][ix].gate = (grid[iz][iy][ix].chromo & 63) % 6;
-								grid[iz][iy][ix].iobuf.fill(DENDRITE_SIG);
-					     		grid[iz][iy][ix].iobuf[grid[iz][iy][ix].gate] = AXON_SIG;
-					      		grid[iz][iy][ix].iobuf[((grid[iz][iy][ix].gate % 2) * -2) + 1 + grid[iz][iy][ix].gate] = AXON_SIG;
+								grid[iz][iy][ix].iobuf.fill(DENDRITE_SIGNAL);
+					     		grid[iz][iy][ix].iobuf[grid[iz][iy][ix].gate] = AXON_SIGNAL;
+					      		grid[iz][iy][ix].iobuf[((grid[iz][iy][ix].gate % 2) * -2) + 1 + grid[iz][iy][ix].gate] = AXON_SIGNAL;
 					    		break;
 					    	}
 
 						    // test for no signal 
-						    input_sum = std::accumulate(
-						    	std::begin(grid[iz][iy][ix].iobuf), std::end(grid[iz][iy][ix].iobuf), 
-    							0, [](int a, int b) { return a + b; }
-						    );
+						    input_sum = fold_plus(grid[iz][iy][ix].iobuf);
 							if(input_sum == 0) {
 								break;
 							}
 
 							// test for axon signals
-							input_sum = std::accumulate(
-						    	std::begin(grid[iz][iy][ix].iobuf), std::end(grid[iz][iy][ix].iobuf), 
-    							0, [](int a, int b) { return a + (b & AXON_SIG); }
-						    );
-							// exactly one AXON_SIG
-							if(input_sum == AXON_SIG) {
+							input_sum = fold_plus_and(grid[iz][iy][ix].iobuf, AXON_SIGNAL); 
+							if(input_sum == AXON_SIGNAL) {
 	      						grid[iz][iy][ix].type = AXON;
 							    changed = true;
 
@@ -184,23 +134,19 @@ public:
 									if(grid[iz][iy][ix].iobuf[i] == AXON) {
 								  		grid[iz][iy][ix].gate = i;
 									}
-									grid[iz][iy][ix].iobuf[i] = (((grid[iz][iy][ix].chromo >> i) & 1) != 0) ? AXON_SIG : 0;
+									grid[iz][iy][ix].iobuf[i] = (((grid[iz][iy][ix].chromo >> i) & 1) != 0) ? AXON_SIGNAL : 0;
 								}
 								break;
 							}
-							// more than one AXON_SIG 
-							if(input_sum > AXON_SIG) {
+
+							if(input_sum > AXON_SIGNAL) {
 								grid[iz][iy][ix].iobuf.fill(0);
 							    break;
 							}
 
-						    // Test for DENDRITE_SIG's 
-						    input_sum = std::accumulate(
-						    	std::begin(grid[iz][iy][ix].iobuf), std::end(grid[iz][iy][ix].iobuf), 
-    							0, [](int a, int b) { return a + (b & DENDRITE_SIG); }
-						    );
-							// exactly one DENDRITE_SIG
-							if(input_sum == DENDRITE_SIG) {
+						    // Test for DENDRITE_SIGNAL's 
+						    input_sum = fold_plus_and(grid[iz][iy][ix].iobuf, DENDRITE_SIGNAL);
+							if(input_sum == DENDRITE_SIGNAL) {
 								changed = true;
 								grid[iz][iy][ix].type = DENDRITE;
 
@@ -211,31 +157,31 @@ public:
 								}
 
 								for(int i=0; i<6; i++) {
-									grid[iz][iy][ix].iobuf[i] = (((grid[iz][iy][ix].chromo >> i) & 1) != 0) ? DENDRITE_SIG : 0;
+									grid[iz][iy][ix].iobuf[i] = (((grid[iz][iy][ix].chromo >> i) & 1) != 0) ? DENDRITE_SIGNAL : 0;
 								}
 
 								break;
 							}
 
-	    					// default(more than one DENDRITE_SIG and no AXON_SIG)
+	    					// default(more than one DENDRITE_SIGNAL and no AXON_SIGNAL)
 	    					grid[iz][iy][ix].iobuf.fill(0);
 	    					break;
 
 	  					case NEURON:
-							grid[iz][iy][ix].iobuf.fill(DENDRITE_SIG);
-					    	grid[iz][iy][ix].iobuf[grid[iz][iy][ix].gate] = AXON_SIG;
-					    	grid[iz][iy][ix].iobuf[((grid[iz][iy][ix].gate % 2) * -2) + 1 + grid[iz][iy][ix].gate] = AXON_SIG; 
+							grid[iz][iy][ix].iobuf.fill(DENDRITE_SIGNAL);
+					    	grid[iz][iy][ix].iobuf[grid[iz][iy][ix].gate] = AXON_SIGNAL;
+					    	grid[iz][iy][ix].iobuf[((grid[iz][iy][ix].gate % 2) * -2) + 1 + grid[iz][iy][ix].gate] = AXON_SIGNAL; 
 					   		break;
 
 						case AXON:
 							for(int i=0; i<6; i++) {
-								grid[iz][iy][ix].iobuf[i] = (((grid[iz][iy][ix].chromo >> i) & 1) != 0) ? AXON_SIG : 0;
+								grid[iz][iy][ix].iobuf[i] = (((grid[iz][iy][ix].chromo >> i) & 1) != 0) ? AXON_SIGNAL : 0;
 							}
 							break;
 
 						case DENDRITE:
 	    					for(int i=0; i<6; i++) {
-	    						grid[iz][iy][ix].iobuf[i] = (((grid[iz][iy][ix].chromo >> i) & 1) != 0) ? DENDRITE_SIG : 0;
+	    						grid[iz][iy][ix].iobuf[i] = (((grid[iz][iy][ix].chromo >> i) & 1) != 0) ? DENDRITE_SIGNAL : 0;
 	    					}
 	    					break;
 	    				default:
@@ -258,20 +204,17 @@ public:
     	for(int iz=0;iz<GSize;iz++) {
       		for(int iy=0;iy<GSize;iy++) {
 				for(int ix=0;ix<GSize;ix++) {
-					// // now the Rules ////
 					switch(grid[iz][iy][ix].type) {
 						case BLANK:
-							//for(int i=0; i<6; i++) 
-							//grid[iz][iy][ix].iobuf[i] = 0;
+							//grid[iz][iy][ix].iobuf.fill(0);
 							break;
 
 						case NEURON:
 							// add default gain
-							input_sum = std::accumulate(
-						    	std::begin(grid[iz][iy][ix].iobuf), std::end(grid[iz][iy][ix].iobuf), 
-    							1, [](int a, int b) { return a + b; }
-						    ) - grid[iz][iy][ix].iobuf[grid[iz][iy][ix].gate]
-						      - grid[iz][iy][ix].iobuf[((grid[iz][iy][ix].gate % 2) * -2) + 1 + grid[iz][iy][ix].gate];
+							input_sum = 1
+							 	+ fold_plus(grid[iz][iy][ix].iobuf)
+    						 	- grid[iz][iy][ix].iobuf[grid[iz][iy][ix].gate]
+						    	- grid[iz][iy][ix].iobuf[((grid[iz][iy][ix].gate % 2) * -2) + 1 + grid[iz][iy][ix].gate];
 							
 							grid[iz][iy][ix].iobuf.fill(0);
 							grid[iz][iy][ix].activation += input_sum;
@@ -292,10 +235,7 @@ public:
 						 	break;
 
 						case DENDRITE:
-							input_sum = std::accumulate(
-						    	std::begin(grid[iz][iy][ix].iobuf), std::end(grid[iz][iy][ix].iobuf), 
-    							0, [](int a, int b) { return a + b; }
-						    );
+							input_sum = fold_plus(grid[iz][iy][ix].iobuf);
 							input_sum = (input_sum > 2) ? 2 : input_sum;
 						    grid[iz][iy][ix].iobuf.fill(0);
 						  	grid[iz][iy][ix].iobuf[grid[iz][iy][ix].gate] = input_sum;
@@ -310,6 +250,61 @@ public:
 		kicking(); 
 	}
 
+
+public:
+	network() : 
+		changed(true), 
+		input_sum(0), 
+		signaling_inited(false)
+	{
+		std::uniform_int_distribution<int> gsize_rng(0, GSize);
+
+		for(int iz=0; iz<GSize; ++iz) {
+			for(int iy=0; iy<GSize; ++iy) {
+				for(int ix=0; ix<GSize; ++ix) {
+					// restrict to grid
+					if(((iz + 1) % 2) * (iy % 2) == 1) {
+						grid[iz][iy][ix].chromo = (grid[iz][iy][ix].chromo & ~3) | 12;
+					}
+
+		  			if((iz % 2) * ((iy + 1) % 2) == 1) {
+		  				grid[iz][iy][ix].chromo = (grid[iz][iy][ix].chromo & ~12) | 3;
+		  			}
+
+		  			// Kill unwanted neuronseeds. Neuronsee only on crossings.
+	  				if((iz % 2) + (iy % 2) != 0) {
+	  					grid[iz][iy][ix].chromo &= ~192;
+	  				}
+
+	  				// Decrease prob of neuronseeds
+	  				if(grid[iz][iy][ix].chromo >> 6 == NEURONSEED) {
+	  					if(gsize_rng(rng_gen) < (GSize / 2)) {
+	  						grid[iz][iy][ix].chromo &= ~192;
+	  					}
+	  				}
+
+	  				// restrict axon-initial-growth in neuron to XY-plane.
+	  				if(grid[iz][iy][ix].chromo >> 6 == NEURONSEED) {
+	  					grid[iz][iy][ix].chromo = (grid[iz][iy][ix].chromo & 192) | ((grid[iz][iy][ix].chromo & 63) % 4);
+	  				}
+	  		  	}
+	  		}
+		}
+	}
+
+  	void step_ca()
+  	{
+    	if(changed) {
+    		growth_step();
+    	} else {
+      		if(!signaling_inited) {
+      			init_signaling();
+	      	}
+
+    		signal_step();
+    	}
+  	}
+
 	void render()
 	{
 		int ix = 0;
@@ -320,7 +315,7 @@ public:
 			std::cout << std::endl;
 		}
 
-		std::cout << std::endl << std::endl << "==================" << std::endl;
+		std::cout << std::endl << std::endl;
 	}
 };
 
