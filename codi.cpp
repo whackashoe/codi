@@ -14,8 +14,8 @@ int main(int argc, char ** argv)
 	network<16> nw;
 
 	for(int i=0; i<10; i++) {
-		nw.render();
 		nw.step_ca();
+		nw.render();
 	}
 
     return 0;

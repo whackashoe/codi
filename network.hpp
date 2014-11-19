@@ -5,6 +5,7 @@
 #include <bitset>
 #include <numeric>
 #include <random>
+#include <cstdint>
 #include <iostream>
 #include "cell.hpp"
 #include "cell_type.hpp"
@@ -37,7 +38,7 @@ private:
 	template <typename Container>
 	inline typename Container::value_type fold_plus_and(Container c, typename Container::value_type v)
 	{
-		return std::accumulate(std::begin(c), std::end(c), 0, [&](int a, int b) {
+		return std::accumulate(std::begin(c), std::end(c), 0, [&](typename Container::value_type a, typename Container::value_type b) {
 			return a + (b & v);
 		});
 	}
@@ -55,9 +56,9 @@ private:
 	void kicking()
 	{
 	    // For the positive directions 
-	    for(int iz=0; iz<GSize; iz++) {
-	    	for(int iy=0; iy<GSize; iy++) {
-				for(int ix=0; ix<GSize; ix++) {
+	    for(int iz=0; iz<GSize; ++iz) {
+	    	for(int iy=0; iy<GSize; ++iy) {
+				for(int ix=0; ix<GSize; ++ix) {
 			   		grid[iz][iy][ix].iobuf[0] = (ix != GSize-1) ? grid[iz+1][iy][ix].iobuf[0] : 0;
 			    	grid[iz][iy][ix].iobuf[2] = (iy != GSize-1) ? grid[iz][iy+1][ix].iobuf[2] : 0;
 			  		grid[iz][iy][ix].iobuf[4] = (iz != GSize-1) ? grid[iz][iy][ix+1].iobuf[4] : 0;
@@ -82,9 +83,9 @@ private:
 		std::uniform_int_distribution<int> three_two_rng(0, 32);
     	has_setup_signaling = true;
 
-    	for(int iz=0; iz<GSize; iz++) {
-	    	for(int iy=0; iy<GSize; iy++) {
-				for(int ix=0; ix<GSize; ix++) {
+    	for(int iz=0; iz<GSize; ++iz) {
+	    	for(int iy=0; iy<GSize; ++iy) {
+				for(int ix=0; ix<GSize; ++ix) {
 			  		grid[iz][iy][ix].activation = 0;
 			  		grid[iz][iy][ix].iobuf.fill(0);
 
@@ -104,9 +105,9 @@ private:
   		int input_sum { 0 };
     	changed = false;
 
-    	for(int iz=0; iz<GSize; iz++) {
-      		for(int iy=0; iy<GSize; iy++) {
-				for(int ix=0; ix<GSize; ix++) {
+    	for(int iz=0; iz<GSize; ++iz) {
+      		for(int iy=0; iy<GSize; ++iy) {
+				for(int ix=0; ix<GSize; ++ix) {
 	  				switch(grid[iz][iy][ix].type) {
 	  					case BLANK: 
 					    	// see if it is a neuronseed (in bit ..7,8 of chromo) 
@@ -143,7 +144,7 @@ private:
 	      						grid[iz][iy][ix].type = AXON;
 							    changed = true;
 
-							    for(int i=0; i<6; i++) {
+							    for(int i=0; i<6; ++i) {
 									if(grid[iz][iy][ix].iobuf[i] == AXON) {
 								  		grid[iz][iy][ix].gate = i;
 									}
@@ -163,13 +164,13 @@ private:
 								changed = true;
 								grid[iz][iy][ix].type = DENDRITE;
 
-								for(int i=0; i<6; i++) {
+								for(int i=0; i<6; ++i) {
 									if(grid[iz][iy][ix].iobuf[i] != 0) {
 			  							grid[iz][iy][ix].gate = ((i % 2) * -2) + 1 + i;
 									}
 								}
 
-								for(int i=0; i<6; i++) {
+								for(int i=0; i<6; ++i) {
 									grid[iz][iy][ix].iobuf[i] = (((grid[iz][iy][ix].chromo >> i) & 1) != 0) ? DENDRITE_SIGNAL : 0;
 								}
 
@@ -187,13 +188,13 @@ private:
 					   		break;
 
 						case AXON:
-							for(int i=0; i<6; i++) {
+							for(int i=0; i<6; ++i) {
 								grid[iz][iy][ix].iobuf[i] = (((grid[iz][iy][ix].chromo >> i) & 1) != 0) ? AXON_SIGNAL : 0;
 							}
 							break;
 
 						case DENDRITE:
-	    					for(int i=0; i<6; i++) {
+	    					for(int i=0; i<6; ++i) {
 	    						grid[iz][iy][ix].iobuf[i] = (((grid[iz][iy][ix].chromo >> i) & 1) != 0) ? DENDRITE_SIGNAL : 0;
 	    					}
 	    					break;
@@ -213,11 +214,11 @@ private:
 	 */
 	void signal_step()
 	{
-    	int input_sum { 0 };
+    	std::uint8_t input_sum { 0 };
 
-    	for(int iz=0; iz<GSize; iz++) {
-      		for(int iy=0; iy<GSize; iy++) {
-				for(int ix=0; ix<GSize; ix++) {
+    	for(int iz=0; iz<GSize; ++iz) {
+      		for(int iy=0; iy<GSize; ++iy) {
+				for(int ix=0; ix<GSize; ++ix) {
 					switch(grid[iz][iy][ix].type) {
 						case BLANK: break;
 
@@ -245,7 +246,7 @@ private:
 						  	break;
 
 						case AXON:
-							for(int i=0; i<6; i++) {
+							for(int i=0; i<6; ++i) {
 						    	grid[iz][iy][ix].iobuf[i] = grid[iz][iy][ix].iobuf[grid[iz][iy][ix].gate];
 							}
 							grid[iz][iy][ix].activation = ((grid[iz][iy][ix].iobuf[grid[iz][iy][ix].gate]) != 0) ? 1 : 0;
@@ -270,7 +271,7 @@ private:
 public:
 	network() : changed(true), has_setup_signaling(false)
 	{
-		std::uniform_int_distribution<int> gsize_rng(0, GSize);
+		std::uniform_int_distribution<std::uint8_t> gsize_rng(0, GSize);
 
 		for(int iz=0; iz<GSize; ++iz) {
 			for(int iy=0; iy<GSize; ++iy) {
@@ -320,9 +321,9 @@ public:
 
 	void render()
 	{
-		int ix = 0;
-		for(int iz=0; iz<GSize; iz++) {
-			for(int iy=0; iy<GSize; iy++) {
+		int ix { 0 };
+		for(int iz=0; iz<GSize; ++iz) {
+			for(int iy=0; iy<GSize; ++iy) {
 				std::cout << grid[iz][iy][ix].type;
 			}
 			std::cout << std::endl;
