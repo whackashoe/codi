@@ -21,7 +21,7 @@ extern std::mt19937 rng_gen;
  * Signals are distributed from the neuron bodies via their axon tree and collected from connection dendrites.
  * These two basic interactions cover every case, and they can be expressed simply, using a small number of rules.
  */
-template <unsigned int GSize>
+template <int GSize>
 class network
 {
 private:
@@ -55,27 +55,29 @@ private:
 	 */
 	void kicking()
 	{
-	    // For the positive directions 
+	    // For the positive directions
+	    
 	    for(int iz=0; iz<GSize; ++iz) {
 	    	for(int iy=0; iy<GSize; ++iy) {
 				for(int ix=0; ix<GSize; ++ix) {
-			   		grid[iz][iy][ix].iobuf[0] = (ix != GSize-1) ? grid[iz+1][iy][ix].iobuf[0] : 0;
+			   		grid[iz][iy][ix].iobuf[4] = (iz != GSize-1) ? grid[iz+1][iy][ix].iobuf[4] : 0;
 			    	grid[iz][iy][ix].iobuf[2] = (iy != GSize-1) ? grid[iz][iy+1][ix].iobuf[2] : 0;
-			  		grid[iz][iy][ix].iobuf[4] = (iz != GSize-1) ? grid[iz][iy][ix+1].iobuf[4] : 0;
-
-		    		// For the negative directions 
-		    		for(int iz=GSize-1; iz >= 0; iz--) {
-		      			for(int iy=GSize-1; iy >= 0; iy--) {
-							for(int ix=GSize-1; ix >= 0; ix--) {
-				  				grid[iz][iy][ix].iobuf[1] = (ix != 0) ? grid[iz-1][iy][ix].iobuf[1] : 0;
-				    			grid[iz][iy][ix].iobuf[3] = (iy != 0) ? grid[iz][iy-1][ix].iobuf[3] : 0;
-				    			grid[iz][iy][ix].iobuf[5] = (iz != 0) ? grid[iz][iy][ix-1].iobuf[5] : 0;
-				    		}
-				    	}
-				    }
-				}
+			  		grid[iz][iy][ix].iobuf[0] = (ix != GSize-1) ? grid[iz][iy][ix+1].iobuf[0] : 0;
+			  	}
 			}
 		}
+
+		// For the negative directions
+		
+		for(int iz=GSize-1; iz >= 0; --iz) {
+  			for(int iy=GSize-1; iy >= 0; --iy) {
+				for(int ix=GSize-1; ix >= 0; --ix) {
+	  				grid[iz][iy][ix].iobuf[5] = (iz != 0) ? grid[iz-1][iy][ix].iobuf[5] : 0;
+	    			grid[iz][iy][ix].iobuf[3] = (iy != 0) ? grid[iz][iy-1][ix].iobuf[3] : 0;
+	    			grid[iz][iy][ix].iobuf[1] = (ix != 0) ? grid[iz][iy][ix-1].iobuf[1] : 0;
+	    		}
+	    	}
+	    }
 	}
 
 	void setup_signaling()
@@ -83,6 +85,7 @@ private:
 		std::uniform_int_distribution<int> three_two_rng(0, 32);
     	has_setup_signaling = true;
 
+		
     	for(int iz=0; iz<GSize; ++iz) {
 	    	for(int iy=0; iy<GSize; ++iy) {
 				for(int ix=0; ix<GSize; ++ix) {
@@ -105,6 +108,7 @@ private:
   		int input_sum { 0 };
     	changed = false;
 
+		
     	for(int iz=0; iz<GSize; ++iz) {
       		for(int iy=0; iy<GSize; ++iy) {
 				for(int ix=0; ix<GSize; ++ix) {
@@ -158,7 +162,7 @@ private:
 							    break;
 							}
 
-						    // Test for DENDRITE_SIGNAL's 
+						    // Test for dendrite signals
 						    input_sum = fold_plus_and(grid[iz][iy][ix].iobuf, DENDRITE_SIGNAL);
 							if(input_sum == DENDRITE_SIGNAL) {
 								changed = true;
@@ -177,7 +181,7 @@ private:
 								break;
 							}
 
-	    					// default(more than one DENDRITE_SIGNAL and no AXON_SIGNAL)
+	    					// default(more than one dendrite signal and no axon signal)
 	    					grid[iz][iy][ix].iobuf.fill(0);
 	    					break;
 
@@ -216,6 +220,7 @@ private:
 	{
     	std::uint8_t input_sum { 0 };
 
+		
     	for(int iz=0; iz<GSize; ++iz) {
       		for(int iy=0; iy<GSize; ++iy) {
 				for(int ix=0; ix<GSize; ++ix) {
@@ -271,8 +276,9 @@ private:
 public:
 	network() : changed(true), has_setup_signaling(false)
 	{
-		std::uniform_int_distribution<std::uint8_t> gsize_rng(0, GSize);
+		std::uniform_int_distribution<std::uint32_t> gsize_rng(0, GSize);
 
+		
 		for(int iz=0; iz<GSize; ++iz) {
 			for(int iy=0; iy<GSize; ++iy) {
 				for(int ix=0; ix<GSize; ++ix) {
@@ -322,6 +328,7 @@ public:
 	void render()
 	{
 		int ix { 0 };
+
 		for(int iz=0; iz<GSize; ++iz) {
 			for(int iy=0; iy<GSize; ++iy) {
 				std::cout << grid[iz][iy][ix].type;
