@@ -348,7 +348,6 @@ public:
 		pv::CubicSurfaceExtractorWithNormals<pv::SimpleVolume<std::uint8_t>> surfaceExtractor(&volData, volData.getEnclosingRegion(), &mesh);
 		surfaceExtractor.execute();
 
-
 		//Pass the surface to the OpenGL window
 		openGLWidget.setSurfaceMeshToRender(mesh);
   	}

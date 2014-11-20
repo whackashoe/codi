@@ -25,15 +25,28 @@ distribution.
 #include "OpenGLWidget.h"
 
 #include <QtGui/QMouseEvent>
+#include <QtCore/QTimer>
 
 using namespace PolyVox;
 using namespace std;
 
-OpenGLWidget::OpenGLWidget(QWidget *parent)
-	:QGLWidget(parent)
+OpenGLWidget::OpenGLWidget(QWidget *parent) :
+	 QGLWidget(parent)
+	,mTimer(new QTimer(this))
 	,m_xRotation(0)
 	,m_yRotation(0)
+	,error_reporting(true)
+	,verbose_startup(true)
 {
+	mTimer->setInterval( 40 );
+    mTimer->setSingleShot( false );
+    connect( mTimer, SIGNAL(timeout()), this, SLOT(animate()) );
+    mTimer->start();
+}
+
+void OpenGLWidget::animate()
+{
+	std::cout << "test" << std::endl;
 }
 
 void OpenGLWidget::setSurfaceMeshToRender(const PolyVox::SurfaceMesh<PositionMaterialNormal>& surfaceMesh)
@@ -58,36 +71,18 @@ void OpenGLWidget::setSurfaceMeshToRender(const PolyVox::SurfaceMesh<PositionMat
 	m_uEndIndex = vecIndices.size();
 }
 
-void OpenGLWidget::setSurfaceMeshToRenderLowLOD(const PolyVox::SurfaceMesh<PositionMaterialNormal>& surfaceMesh)
-{
-	//Convienient access to the vertices and indices
-	const vector<uint32_t>& vecIndices = surfaceMesh.getIndices();
-	const vector<PositionMaterialNormal>& vecVertices = surfaceMesh.getVertices();
-
-	//Build an OpenGL index buffer
-	glGenBuffers(1, &indexBufferLow);
-	glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, indexBufferLow);
-	const GLvoid* pIndices = static_cast<const GLvoid*>(&(vecIndices[0]));		
-	glBufferData(GL_ELEMENT_ARRAY_BUFFER, vecIndices.size() * sizeof(uint32_t), pIndices, GL_STATIC_DRAW);
-
-	//Build an OpenGL vertex buffer
-	glGenBuffers(1, &vertexBufferLow);
-	glBindBuffer(GL_ARRAY_BUFFER, vertexBufferLow);
-	const GLvoid* pVertices = static_cast<const GLvoid*>(&(vecVertices[0]));	
-	glBufferData(GL_ARRAY_BUFFER, vecVertices.size() * sizeof(PositionMaterialNormal), pVertices, GL_STATIC_DRAW);
-
-	m_uBeginIndexLow = 0;
-	m_uEndIndexLow = vecIndices.size();
-}
-
 void OpenGLWidget::initializeGL()
 {
 	//We need GLEW to access recent OpenGL functionality
-	std::cout << "Initialising GLEW...";
+	if(verbose_startup) {
+		std::cout << "Initialising GLEW...";
+	}
 	GLenum result = glewInit();
 	if (result == GLEW_OK)
 	{
-	  std::cout << "success" << std::endl;
+	  	if(verbose_startup) {
+			std::cout << "success" << std::endl;
+		}
 	}
 	else
 	{
@@ -97,16 +92,18 @@ void OpenGLWidget::initializeGL()
 		exit(EXIT_FAILURE);
 	}
 	
-	//Print out some information about the OpenGL implementation.
-	std::cout << "OpenGL Implementation Details:" << std::endl;
-	if(glGetString(GL_VENDOR))
-	  std::cout << "\tGL_VENDOR: " << glGetString(GL_VENDOR) << std::endl;
-	if(glGetString(GL_RENDERER))
-	  std::cout << "\tGL_RENDERER: " << glGetString(GL_RENDERER) << std::endl;
-	if(glGetString(GL_VERSION))
-	  std::cout << "\tGL_VERSION: " << glGetString(GL_VERSION) << std::endl;
-	if(glGetString(GL_SHADING_LANGUAGE_VERSION))
-	  std::cout << "\tGL_SHADING_LANGUAGE_VERSION: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
+	if(verbose_startup) {
+		//Print out some information about the OpenGL implementation.
+		std::cout << "OpenGL Implementation Details:" << std::endl;
+		if(glGetString(GL_VENDOR))
+		  std::cout << "\tGL_VENDOR: " << glGetString(GL_VENDOR) << std::endl;
+		if(glGetString(GL_RENDERER))
+		  std::cout << "\tGL_RENDERER: " << glGetString(GL_RENDERER) << std::endl;
+		if(glGetString(GL_VERSION))
+		  std::cout << "\tGL_VERSION: " << glGetString(GL_VERSION) << std::endl;
+		if(glGetString(GL_SHADING_LANGUAGE_VERSION))
+		  std::cout << "\tGL_SHADING_LANGUAGE_VERSION: " << glGetString(GL_SHADING_LANGUAGE_VERSION) << std::endl;
+	}
 	
 	//Check our version of OpenGL is recent enough.
 	//We need at least 1.5 for vertex buffer objects,
@@ -183,7 +180,7 @@ void OpenGLWidget::paintGL()
 	glDrawRangeElements(GL_TRIANGLES, m_uBeginIndexLow, m_uEndIndexLow-1, m_uEndIndexLow - m_uBeginIndexLow, GL_UNSIGNED_INT, 0);
 	
 	GLenum errCode = glGetError();
-	if(errCode != GL_NO_ERROR)
+	if(errCode != GL_NO_ERROR && error_reporting)
 	{
 	  //What has replaced getErrorString() in the latest OpenGL?
 	  std::cout << "OpenGL Error: " << errCode << std::endl;
@@ -207,4 +204,14 @@ void OpenGLWidget::mouseMoveEvent(QMouseEvent* event)
 	m_LastFrameMousePos = m_CurrentMousePos;
 
 	update();
+}
+
+void OpenGLWidget::disableErrorReporting()
+{
+	error_reporting = false;
+}
+
+void OpenGLWidget::disableVerboseStartup()
+{
+	verbose_startup = false;
 }

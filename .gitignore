@@ -1,1 +1,4 @@
 codi2
+*.o
+Makefile
+moc_*

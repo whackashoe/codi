@@ -21,17 +21,16 @@ misrepresented as being the original software.
 distribution. 	
 *******************************************************************************/
 
-#ifndef __BasicExample_OpenGLWidget_H__
-#define __BasicExample_OpenGLWidget_H__
+#ifndef OpenGLWidget_H
+#define OpenGLWidget_H
 
 #include <PolyVoxCore/SurfaceMesh.h>
-
 #include <GL/glew.h>
-
 #include <QtOpenGL/QGLWidget>
 
 class OpenGLWidget : public QGLWidget
 {
+	Q_OBJECT
 public:
 	//Constructor
 	OpenGLWidget(QWidget *parent);
@@ -42,7 +41,9 @@ public:
 
 	//Convert a SrfaceMesh to OpenGL index/vertex buffers
 	void setSurfaceMeshToRender(const PolyVox::SurfaceMesh<PolyVox::PositionMaterialNormal>& surfaceMesh);
-	void setSurfaceMeshToRenderLowLOD(const PolyVox::SurfaceMesh<PolyVox::PositionMaterialNormal>& surfaceMesh);
+	void disableErrorReporting();
+	void disableVerboseStartup();
+
 
 protected:
 	//Qt OpenGL functions
@@ -50,7 +51,11 @@ protected:
 	void resizeGL(int w, int h);
 	void paintGL();
 
+private slots:
+    void animate();
+
 private:
+	QTimer * mTimer;
 	//Index/vertex buffer data
 	GLuint m_uBeginIndex;
 	GLuint m_uEndIndex;
@@ -69,6 +74,9 @@ private:
 	QPoint m_CurrentMousePos;
 	int m_xRotation;
 	int m_yRotation;
+
+	bool error_reporting;
+	bool verbose_startup;
 };
 
 #endif //__BasicExample_OpenGLWidget_H__

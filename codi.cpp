@@ -12,7 +12,7 @@
 
 
 constexpr int GSize = 30;
-constexpr int Max_Iterations = 50;
+//constexpr int Max_Iterations = 50;
 
 std::random_device rd;
 std::mt19937 rng_gen(rd());
@@ -26,14 +26,17 @@ int main(int argc, char ** argv)
 	//Create and show the Qt OpenGL window
 	QApplication app(argc, argv);
 	OpenGLWidget openGLWidget(0);
+	openGLWidget.disableErrorReporting();
+	openGLWidget.disableVerboseStartup();
 	openGLWidget.show();
+	std::cout << "hi" << std::endl;
 
 
-	for(int i=0; i<Max_Iterations; i++) {
+	/*for(int i=0; i<Max_Iterations; i++) {
 		std::cout << i << std::endl;
 		nw.step_ca();
 		nw.render_voxels(openGLWidget);
-	}
+	}*/
 
 
 	//Run the message pump.
@@ -42,7 +45,7 @@ int main(int argc, char ** argv)
 	for(int i=0; i<Max_Iterations; i++) {
 		std::cout << i << std::endl;
 		nw.step_ca();
-		nw.render_voxels(openGLWidget);
+		nw.render();
 	}
 
 	return 0;
