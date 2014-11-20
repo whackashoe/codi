@@ -10,7 +10,6 @@
 #include "config.hpp"
 #include "cell.hpp"
 #include "cell_type.hpp"
-#include "cell_color.hpp"
 #include "utility.hpp"
 
 extern std::mt19937 rng_gen;
@@ -260,7 +259,6 @@ private:
 
 public:
 	std::array<std::array<std::array<cell, GSize>, GSize>, GSize> grid;
-	std::array<std::array<std::array<cell_color, GSize>, GSize>, GSize> render_space;
 	
 	network() : changed(true), has_setup_signaling(false)
 	{
