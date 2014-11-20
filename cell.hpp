@@ -7,7 +7,7 @@
 #include "cell_type.hpp"
 
 extern std::mt19937 rng_gen;
-std::uniform_int_distribution<std::uint8_t> two_five_six_rng(0, 255);
+extern std::uniform_int_distribution<std::uint8_t> two_five_six_rng;
 
 class cell
 {

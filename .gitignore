@@ -1,4 +1,2 @@
-codi2
+codi
 *.o
-Makefile
-moc_*

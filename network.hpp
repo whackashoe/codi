@@ -7,22 +7,11 @@
 #include <random>
 #include <cstdint>
 #include <iostream>
+#include "config.hpp"
 #include "cell.hpp"
 #include "cell_type.hpp"
+#include "cell_color.hpp"
 #include "utility.hpp"
-
-#ifdef VOXELS_ENABLED
-	#include <QtGui/QApplication>
-
-	#include <PolyVoxCore/Density.h>
-	#include <PolyVoxCore/CubicSurfaceExtractorWithNormals.h>
-	#include <PolyVoxCore/SurfaceMesh.h>
-	#include <PolyVoxCore/RawVolume.h>
-	#include <PolyVoxCore/SimpleVolume.h>
-	#include <PolyVoxCore/VolumeResampler.h>
-
-	#include "OpenGLWidget.h"
-#endif
 
 extern std::mt19937 rng_gen;
 
@@ -41,7 +30,6 @@ class network
 private:
 	bool changed;
   	bool has_setup_signaling;
-  	std::array<std::array<std::array<cell, GSize>, GSize>, GSize> grid;
 
 
 	/* For the Neighborhood interaction.
@@ -271,6 +259,9 @@ private:
 
 
 public:
+	std::array<std::array<std::array<cell, GSize>, GSize>, GSize> grid;
+	std::array<std::array<std::array<cell_color, GSize>, GSize>, GSize> render_space;
+	
 	network() : changed(true), has_setup_signaling(false)
 	{
 		std::uniform_int_distribution<std::uint32_t> gsize_rng(0, GSize);
@@ -321,59 +312,6 @@ public:
     		signal_step();
     	}
   	}
-
-	#ifdef VOXELS_ENABLED
-  	void render_voxels(OpenGLWidget & openGLWidget) const
-  	{
-  		namespace pv = PolyVox;
-
-		pv::SimpleVolume<std::uint8_t> volData(pv::Region(
-			pv::Vector3DInt32(0, 0, 0),
-			pv::Vector3DInt32(GSize, GSize, GSize))
-		);
-
-		for(int iz=0; iz<GSize; ++iz) {
-			for(int iy=0; iy<GSize; ++iy) {
-				for(int ix=0; ix<GSize; ++ix) {
-					if(grid[iz][iy][ix].type != 0) {
-						std::uint8_t density = std::numeric_limits<uint8_t>::max();
-						volData.setVoxelAt(ix, iy, iz, density);
-					}
-				}
-			}
-		}
-
-		//Extract the surface
-		pv::SurfaceMesh<pv::PositionMaterialNormal> mesh;
-		pv::CubicSurfaceExtractorWithNormals<pv::SimpleVolume<std::uint8_t>> surfaceExtractor(&volData, volData.getEnclosingRegion(), &mesh);
-		surfaceExtractor.execute();
-
-		//Pass the surface to the OpenGL window
-		openGLWidget.setSurfaceMeshToRender(mesh);
-  	}
-  	#endif
-
-
-	void render() const
-	{
-		int ix { 0 };
-
-		for(int iz=0; iz<GSize; ++iz) {
-			for(int iy=0; iy<GSize; ++iy) {
-				char c;
-				switch(grid[iz][iy][ix].type) {
-					case BLANK:    c = ' '; break;
-					case NEURON:   c = '@'; break;
-					case AXON:     c = '*'; break;
-					case DENDRITE: c = '.'; break;
-				}
-				std::cout << c;
-			}
-			std::cout << std::endl;
-		}
-
-		std::cout << std::endl << std::endl;
-	}
 };
 
 #endif
