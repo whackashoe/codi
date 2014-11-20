@@ -12,7 +12,7 @@
 #include "cell_type.hpp"
 #include "utility.hpp"
 
-extern std::mt19937 rng_gen;
+
 
 /* CoDi is a cellular automaton (CA) model for spiking neural networks (SNNs). 
  * CoDi is an acronym for Collect and Distribute, 

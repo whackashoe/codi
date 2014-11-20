@@ -10,11 +10,7 @@
 #include "cell_color.hpp"
 
 
-std::random_device rd;
-std::mt19937 rng_gen { rd() };
-std::uniform_int_distribution<std::uint8_t> two_five_six_rng { 0, 255 };
 network<GSize> nw;
-
 
 void render_ascii(const network<GSize> & nw)
 {
@@ -22,7 +18,7 @@ void render_ascii(const network<GSize> & nw)
 
 	for(int iz=0; iz<GSize; ++iz) {
 		for(int iy=0; iy<GSize; ++iy) {
-			char c;
+			char c { ' ' };
 			switch(nw.grid[iz][iy][ix].type) {
 				case BLANK:    c = ' '; break;
 				case NEURON:   c = '@'; break;
@@ -54,6 +50,7 @@ sf::Color cell_type_to_color(const cell_color c)
 		case cell_color::NEURON:          return neuron_color;          break;
 		case cell_color::AXON: 	          return axon_color;            break;
 		case cell_color::DENDRITE:        return dendrite_color;        break;
+		default:                          return default_color;         break;
 	}
 }
 
@@ -99,7 +96,6 @@ bool render_2d(
 						switch(nw.grid[iz][iy][ix].type) {
 							case AXON:     color = cell_color::AXON_SIGNAL;     break;
 							case DENDRITE: color = cell_color::DENDRITE_SIGNAL; break;
-							default: std::cout << "wtf" << std::endl; break;
 						}
 					} else {
 						color = cell_color::NEURON;
@@ -109,7 +105,6 @@ bool render_2d(
 						case NEURON:   color = cell_color::NEURON;   break;
 						case AXON:     color = cell_color::AXON;     break;
 						case DENDRITE: color = cell_color::DENDRITE; break;
-						default: std::cout << "wtf" << std::endl; break;
 					}
 				}
 

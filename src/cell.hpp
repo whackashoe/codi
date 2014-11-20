@@ -4,10 +4,9 @@
 #include <array>
 #include <iostream>
 #include <cstdint>
+#include "utility.hpp"
 #include "cell_type.hpp"
 
-extern std::mt19937 rng_gen;
-extern std::uniform_int_distribution<std::uint8_t> two_five_six_rng;
 
 class cell
 {

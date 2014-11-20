@@ -2,6 +2,12 @@
 #define UTILITY_H
 
 #include <numeric>
+#include <random>
+
+
+std::random_device rd;
+std::mt19937 rng_gen { rd() };
+std::uniform_int_distribution<std::uint8_t> two_five_six_rng { 0, 255 };
 
 
 template <typename Container>
