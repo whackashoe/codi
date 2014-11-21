@@ -6,12 +6,12 @@
 
 
 enum class cell_color : std::uint8_t {
-	DEFAULT,
-	AXON_SIGNAL,
-	DENDRITE_SIGNAL,
-	NEURON,
-	AXON,
-	DENDRITE
+    DEFAULT,
+    AXON_SIGNAL,
+    DENDRITE_SIGNAL,
+    NEURON,
+    AXON,
+    DENDRITE
 };
 
 #endif

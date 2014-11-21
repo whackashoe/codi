@@ -10,13 +10,13 @@
  * and from the behavior of the dendrite cells, which collect from any neighbor.
  */
 enum cell_type : std::uint8_t {
-	BLANK           = 0, //empty cell
-	NEURONSEED      = 1, //prerequisite for neuron growth
-	NEURON          = 1, //The neuron body cells collect neural signals from the surrounding dendritic cells 
-	AXON            = 2, //Axonal cells distribute data originating from the neuron body.
-	AXON_SIGNAL     = 2, //
-	DENDRITE        = 4, //Dendritic cells collect data and eventually pass it to the neuron body.
-	DENDRITE_SIGNAL = 4,
+    BLANK           = 0, //empty cell
+    NEURONSEED      = 1, //prerequisite for neuron growth
+    NEURON          = 1, //The neuron body cells collect neural signals from the surrounding dendritic cells 
+    AXON            = 2, //Axonal cells distribute data originating from the neuron body.
+    AXON_SIGNAL     = 2, //
+    DENDRITE        = 4, //Dendritic cells collect data and eventually pass it to the neuron body.
+    DENDRITE_SIGNAL = 4,
 };
 
 #endif
