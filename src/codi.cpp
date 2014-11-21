@@ -49,10 +49,10 @@ sf::Color cell_type_to_color(const cell_color c)
     
     switch(c) {
         case cell_color::DEFAULT:         return default_color;         break;
-        case cell_color::AXON_SIGNAL:        return axon_signal_color;     break;
+        case cell_color::AXON_SIGNAL:     return axon_signal_color;     break;
         case cell_color::DENDRITE_SIGNAL: return dendrite_signal_color; break;
         case cell_color::NEURON:          return neuron_color;          break;
-        case cell_color::AXON:               return axon_color;            break;
+        case cell_color::AXON:            return axon_color;            break;
         case cell_color::DENDRITE:        return dendrite_color;        break;
         default:                          return default_color;         break;
     }
